@@ -47,10 +47,10 @@ jobs:
     runs-on: ubuntu-latest    
     # if: github.ref == 'refs/heads/master' || github.event_name == 'release'   
     steps:
+      - uses: actions/checkout@v3 
+
       - id: throw-on-failure  
         uses: ./ci/.github/actions/throw-on-failure    
-
-      - uses: actions/checkout@v3 
 
       - name: Short Image Name
         id: short-image-name
