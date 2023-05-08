@@ -14,7 +14,12 @@ jobs:
     # if: ${{ github.event.workflow_run.conclusion != 'failure' }}
     name: Increment Version
     runs-on: ubuntu-latest    
-  
+    
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
     steps:  
       - id: throw-on-failure
         # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
@@ -26,12 +31,26 @@ jobs:
         run: |
           perl -pi -e 's#<Version>([0-9]+)\.([0-9]+)\.([0-9]+)(.*)</Version>#"<Version>$1.$2.${\( $3+1 )}$4</Version>"#eg' Directory.Build.props
         shell: bash
+        
       - name: Commit changes
-        uses: EndBug/add-and-commit@v9
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          author_name: CI/CD
-          author_email: ${{ inputs.author-email }}
-          message: "Increment Version"
-          add: "Directory.Build.props"
-          push: true
+          commit_user_name: CI/CD
+          commit_user_email: ${{ inputs.author-email }}
+          commit_message: "Increment Version"
+          commit_options: '--no-verify'
+          push_options: '--no-verify'
+          # add_options: '-u'
+          # skip_dirty_check: true
+          # skip_fetch: true  
+          # skip_checkout: true
+
+      # - name: Commit changes
+      #   uses: EndBug/add-and-commit@v9
+      #   with:
+      #     author_name: CI/CD
+      #     author_email: ${{ inputs.author-email }}
+      #     message: "Increment Version"
+      #     add: "Directory.Build.props"
+      #     push: true
     

@@ -34,6 +34,11 @@ jobs:
     name: Increment Version
     runs-on: ubuntu-latest    
   
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
     steps:  
       - id: throw-on-failure
         # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
