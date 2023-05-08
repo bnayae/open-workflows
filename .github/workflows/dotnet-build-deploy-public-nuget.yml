@@ -49,7 +49,7 @@ jobs:
     steps:
       - id: throw-on-failure  
         # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-        uses: bnayae/open-workflows/.github/workflows/throw-on-failure@main    
+        uses: bnayae/open-workflows/.github/actions/throw-on-failure@main    
 
       - uses: actions/checkout@v3
    

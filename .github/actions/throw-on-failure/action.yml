@@ -1,4 +1,4 @@
-name: Throw On Error Conclusion
+name: Throw On Error
 description: "Stop execution when previous stage has error or cancellation"
 
 # doc: https://docs.github.com/en/actions

@@ -48,7 +48,7 @@ jobs:
     # if: github.ref == 'refs/heads/master' || github.event_name == 'release'   
     steps:
       - id: throw-on-failure  
-        uses: bnayae/open-workflows/.github/workflows/throw-on-failure@main    
+        uses: bnayae/open-workflows/.github/actions/throw-on-failure@main    
 
       - uses: actions/checkout@v3 
 
