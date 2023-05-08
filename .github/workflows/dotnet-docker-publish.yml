@@ -1,0 +1,128 @@
+name: Publish Docker
+
+# doc:               https://docs.github.com/en/actions
+# variables:         https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# secrets:           https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-17
+# env:               https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows#access-to-reusable-workflows
+
+on: 
+  workflow_call:
+    inputs:
+      organization:
+        type: string
+        description: "github organization / user of the repo"
+        required: false
+      repo-prefix-convention:
+        type: string
+        description: "expected prefix of the repo name"
+        required: true
+      project:
+        type: string
+        description: "the name of the project directory"
+        required: false
+      assembly-prefix:
+        type: string
+        description: "the name of the assembly prefix prefix.project.dll"
+        required: false
+        # default: 
+      # repo-owner:
+      #   type: string
+      #   description: "the repo owner"
+      #   required: true
+
+    secrets:
+      UPLOAD_PACKAGE_LOCAL:
+        description: "Write token to the nuget registry."
+        required: true  
+
+env: # https://docs.github.com/en/actions/learn-github-actions/environment-variables
+  BASE_PATH: ghcr.io/
+  BRANCH: release/2022-11-15/net7
+
+jobs:
+  docker:
+    # if: ${{ github.event.workflow_run.conclusion != 'failure' }}
+    name: Publish Docker
+    runs-on: ubuntu-latest    
+    # if: github.ref == 'refs/heads/master' || github.event_name == 'release'   
+    steps:
+      - id: throw-on-failure  
+        uses: ./ci/.github/actions/throw-on-failure    
+
+      - uses: actions/checkout@v3 
+
+      - name: Short Image Name
+        id: short-image-name
+        run: |
+            echo ::set-output name=value::$(echo "${{ inputs.project }}" | tr '.' '-' |  tr '/' '-' | tr '[:upper:]' '[:lower:]')
+        shell: bash
+
+      - name: Image
+        id: image
+        run: echo ::set-output name=value::$(echo "${{ steps.short-image-name.outputs.value }}") 
+        shell: bash
+
+      - id: get-version
+        uses: bnayae/get-dotnet-version-action@v2
+
+      - name: Checkout local actions
+        uses: actions/checkout@v3 
+        with:
+         repository: bnayae/workflows
+         path: ci
+         ref: ${{ env.BRANCH }}
+
+      - id: cluster-info
+        name: Cluster info
+        # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        uses: ./ci/.github/actions/eks-cluster-info  
+        with:
+          organization: ${{ inputs.organization }}
+
+      - name: Cluster info validation
+        run: |
+          echo ${{ steps.cluster-info.outputs.organization }}  
+
+      - name: Full image path
+        id: full-image-path
+        run: echo ::set-output name=value::${{ env.BASE_PATH }}${{ steps.cluster-info.outputs.organization }}/${{ steps.image.outputs.value }}
+
+      - name: checkout docker-file + nuget template
+        uses: actions/checkout@v3 # fetch Dockerfile + nuget configuration template
+        with:
+         repository: bnayae/dockerfiles
+         path: docker-file
+         ref: ${{ env.BRANCH }}
+
+      - name: modify nuget.config
+        run: |
+          sed -i -e "s/USER/bnayae/g" -e "s/PW/${{ secrets.UPLOAD_PACKAGE_LOCAL }}/g" ./docker-file/dotnet/nuget.config.template.xml 
+          cp ./docker-file/dotnet/nuget.config.template.xml ./nuget.config
+        shell: bash
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.UPLOAD_PACKAGE_LOCAL }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          file: ./docker-file/dotnet/Dockerfile
+          tags: |
+            ${{ steps.full-image-path.outputs.value }}:latest
+            ${{ steps.full-image-path.outputs.value }}:${{ steps.get-version.outputs.version }}
+          build-args: |
+            PROJECT=${{ inputs.project }}
+            ENTRY_PREFIX=${{ inputs.assembly-prefix }}
+
+

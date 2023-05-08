@@ -1,0 +1,41 @@
+name: Throw On Error Conclusion
+description: "Stop execution when previous stage has error or cancellation"
+
+# doc: https://docs.github.com/en/actions
+# custom: https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
+# variables: https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# secrets: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-17
+
+# PUSH RELEASE:
+#  git tag -a -m "Release version" v#
+#  git push --follow-tags
+
+# inputs:
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cancel Message
+      if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+      run: echo 'Stopped - Dependencies failure'
+      shell: cmd
+
+    - name: Throw
+      if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+      uses: actions/github-script@v5
+      with:
+        script: |
+            core.setFailed('Stopped because of previous failure')
+      
+    - name: Cancel Message
+      if: ${{ github.event.workflow_run.conclusion == 'cancelled' }}
+      run: echo 'Cancelled'
+      shell: cmd
+      
+    - name: Throw
+      if: ${{ github.event.workflow_run.conclusion == 'cancelled' }}
+      uses: actions/github-script@v5
+      with:
+        script: |
+            core.setFailed('Cancelled because of previous cancellation')
+      

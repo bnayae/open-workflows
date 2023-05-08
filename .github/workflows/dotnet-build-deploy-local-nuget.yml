@@ -1,0 +1,88 @@
+name: Build & Deploy NuGet
+
+# doc:               https://docs.github.com/en/actions
+# variables:         https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# secrets:           https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-17
+# env:               https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows#access-to-reusable-workflows
+
+on: 
+  workflow_call:
+    inputs:
+      build-config:
+        type: string
+        description: "Build configuration like Release, Debug, etc."
+        required: false
+        default: "Release"
+      dotnet-version:
+        type: string
+        description: "The .NET version."
+        required: false
+        default: "6.0.x"
+      include-prerelease:
+        type: boolean
+        description: "Indicate whether to include prerelease .NET version."
+        required: false
+        default: false
+
+    secrets:
+      UPLOAD_PACKAGE_LOCAL:
+        description: "Write token to the nuget registry."
+        required: true  
+
+jobs:
+  build-publish_nuget:
+    name: Build & Publish NuGet
+    runs-on: ubuntu-latest    
+    # if: github.ref == 'refs/heads/master' || github.event_name == 'release'   
+
+    steps:
+      - id: throw-on-failure  
+        # if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        uses: ./ci/.github/actions/throw-on-failure    
+
+      - uses: actions/checkout@v3
+   
+      - name: Build Setup (.NET)
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          # dotnet-quality: 'preview'
+          # include-prerelease: ${{ inputs.include-prerelease }}
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.UPLOAD_PACKAGE_LOCAL }}
+          # NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  
+      - name:  NuGet Add github's private registry
+        run: dotnet nuget add source --username bnayae --password ${{ secrets.UPLOAD_PACKAGE_LOCAL }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/bnayae/index.json"
+        shell: bash
+
+      - name: .NET Restore dependencies
+        run: dotnet restore /property:Configuration=${{ inputs.build-config }} 
+        shell: bash
+
+      - name: .NET Build 
+        run: dotnet build  --configuration ${{ inputs.build-config }} --no-restore 
+        # run: dotnet build  --configuration ${{ inputs.build-config }} --no-restore -p:Version=${{ steps.get-version.outputs.version }}
+        shell: bash
+      - name: .NET Test
+        run: dotnet test --filter Category=CI --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutput=../Assets/Coverage/ /p:MergeWith="../Assets/Coverage/coverage.json" /p:CoverletOutputFormat=\"cobertura,json\" -m:1
+        shell: bash      
+  
+      - name: GitHub Package Registry Tool Install
+        run: dotnet tool install --global --verbosity minimal --no-cache gpr
+          
+      - name: NuGet Push (repo = ${{ github.repository }}) 
+        run: |
+          gpr push --api-key ${{ secrets.UPLOAD_PACKAGE_LOCAL }} --repository ${{ github.repository }} --retries 3 ./**/*.nupkg || true
+          gpr push --api-key ${{ secrets.UPLOAD_PACKAGE_LOCAL }} --repository ${{ github.repository }} --retries 3 ./**/*.snupkg || true
+     
+      # - name: Publish NuGet (repo = ${{ github.repository }}) 
+      #   run: |
+      #     dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json -n github-ci -p ${{ secrets.UPLOAD_PACKAGE_LOCAL }} -u bnayae
+      #     dotnet nuget push ./out/**/*.nupkg --source github-ci --skip-duplicate --no-symbols false
+      #     dotnet nuget push ./out/**/*.snupkg --source github-ci --skip-duplicate --no-symbols false
+        # dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --name github-ci -p ${{ github.repository_owner }} -u bnayae
+        # dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --name github-ci --username ${{ github.repository_owner }} --password ${{ github.token }} --store-password-in-clear-text
+        # dotnet nuget push ./out/**/*.nupkg --source github-ci --skip-duplicate --no-symbols false
+        # dotnet nuget push ./**/out/*.nupkg -k ${{ secrets.UPLOAD_PACKAGE_LOCAL }} -s https://api.nuget.org/v3/index.json --skip-duplicate 
