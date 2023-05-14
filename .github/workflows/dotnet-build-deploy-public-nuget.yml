@@ -68,9 +68,17 @@ jobs:
         shell: bash
 
       - name: Test 
-        run: dotnet test ${{ inputs.test-project }} ${{ inputs.test-switch }} --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutput=../Assets/Coverage/ /p:MergeWith="../Assets/Coverage/coverage.json" /p:CoverletOutputFormat=\"cobertura,json\" -m:1
-        # run: dotnet test --filter Category=CI --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal 
+        run: dotnet test ${{ inputs.test-project }} ${{ inputs.test-switch }} --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal --collect:"XPlat Code Coverage"
         shell: bash
+
+      - name: Codecov
+        uses: codecov/codecov-action@v3
+
+      # run: dotnet test --filter Category=CI --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal 
+      # - name: Test 
+      #   run: dotnet test ${{ inputs.test-project }} ${{ inputs.test-switch }} --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutput=../Assets/Coverage/ /p:MergeWith="../Assets/Coverage/coverage.json" /p:CoverletOutputFormat=\"cobertura,json\" -m:1
+      #   # run: dotnet test --filter Category=CI --configuration ${{ inputs.build-config }} --no-restore --no-build --verbosity normal 
+      #   shell: bash
         # https://blog.bitscry.com/2022/09/07/creating-a-code-coverage-report-for-multiple-projects/
 
       - name: Push generated package
