@@ -6,26 +6,42 @@ name: Artifact Cleanup
 # env:               https://docs.github.com/en/actions/learn-github-actions/environment-variables
 # reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows#access-to-reusable-workflows
 
-# credit: https://poweruser.blog/storage-housekeeping-on-github-actions-e2997b5b23d1
-
 on: 
   workflow_call:
     inputs:
-      expire-in-days: 
+      age-value: 
         type: number
-        description: "expiration"
+        description: "max age value"
         required: false
         default: 14
+      age-unit: 
+        type: choice
+        options: 
+          - seconds
+          - minutes
+          - hours
+          - days
+          # - months
+          # - years
+          description: "max age unit"
+        required: false
+        default: days
+      skip-recent: 
+        type: number
+        description: "skipping"
+        required: false
+        default: 0
 
-    secrets:
-      GITHUB_TOKEN:
-        description: "Github token."
-        required: true     
 jobs:
-  delete-artifacts:
+  remove-old-artifacts:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - uses: kolpav/purge-artifacts-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          expire-in: ${{ inputs.expire-in-days }}days # Setting this to 0 will delete all artifacts
+    - name: Remove old artifacts
+      uses: c-hive/gha-remove-artifacts@v1
+      with:
+        age: '${{ inputs.age-value }} ${{ inputs.age-unit }}' # '<number> <unit>', e.g. 5 days, 2 years, 90 seconds, parsed by Moment.js
+        # Optional inputs
+        # skip-tags: true
+        skip-recent: ${{ inputs.skip-recent }}
