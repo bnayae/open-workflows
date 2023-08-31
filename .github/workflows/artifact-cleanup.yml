@@ -1,0 +1,31 @@
+name: Artifact Cleanup
+
+# doc:               https://docs.github.com/en/actions
+# variables:         https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# secrets:           https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-17
+# env:               https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# reusable workflow: https://docs.github.com/en/actions/learn-github-actions/reusing-workflows#access-to-reusable-workflows
+
+# credit: https://poweruser.blog/storage-housekeeping-on-github-actions-e2997b5b23d1
+
+on: 
+  workflow_call:
+    inputs:
+      expire-in-days: 
+        type: number
+        description: "expiration"
+        required: false
+        default: 14
+
+    secrets:
+      GITHUB_TOKEN:
+        description: "Github token."
+        required: true     
+jobs:
+  delete-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: ${{ inputs.expire-in-days }}days # Setting this to 0 will delete all artifacts
