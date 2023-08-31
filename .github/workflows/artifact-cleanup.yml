@@ -14,14 +14,14 @@ on:
         description: "max age value"
         required: true
       age-unit: 
-        # type: string
-        type: choice
-        options: 
-          - seconds
-          - minutes
-          - hours
-          - days
-          - months
+        type: string
+        # type: choice
+        # options: 
+        #   - seconds
+        #   - minutes
+        #   - hours
+        #   - days
+        #   - months
         description: "max age unit"
         required: true
       skip-recent: 
