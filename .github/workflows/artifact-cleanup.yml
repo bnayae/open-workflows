@@ -21,9 +21,8 @@ on:
           - minutes
           - hours
           - days
-          # - months
-          # - years
-          description: "max age unit"
+          - months
+        description: "max age unit"
         required: false
         default: days
       skip-recent: 
