@@ -12,19 +12,18 @@ on:
       age-value: 
         type: number
         description: "max age value"
-        required: false
-        default: 14
+        required: true
       age-unit: 
-        type: choice
-        options: 
-          - seconds
-          - minutes
-          - hours
-          - days
-          - months
+        type: string
+        # type: choice
+        # options: 
+        #   - seconds
+        #   - minutes
+        #   - hours
+        #   - days
+        #   - months
         description: "max age unit"
-        required: false
-        default: days
+        required: true
       skip-recent: 
         type: number
         description: "skipping"
